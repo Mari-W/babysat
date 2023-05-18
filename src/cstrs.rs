@@ -1,10 +1,10 @@
 use crate::{
-  data::{Clause, Cnf, Matrix, State},
+  data::{Clause, Cnf, Matrix, State, Stats},
   nvec::NVec,
 };
 
 impl Clause {
-  /// constructor for clauses
+  /// constructs a clause from literals
   pub fn new(literals: Vec<i64>) -> Clause {
     Clause {
       size: literals.len(),
@@ -12,7 +12,7 @@ impl Clause {
     }
   }
 
-  /// constructor for a unit clause
+  /// constructs a unit clause from one literal
   pub fn new_unit(lit: i64) -> Clause {
     Clause {
       size: 1,
@@ -22,6 +22,7 @@ impl Clause {
 }
 
 impl Cnf {
+  /// constructs a cnf
   pub fn new(
     filename: String,
     clauses: Vec<Clause>,
@@ -48,6 +49,7 @@ impl Matrix {
 }
 
 impl State {
+  /// constructs the default state
   pub fn new(num_variables: usize) -> State {
     State {
       level: usize::default(),
@@ -56,5 +58,12 @@ impl State {
       control: Vec::default(),
       trail: Vec::default(),
     }
+  }
+}
+
+impl Stats {
+  /// constructs a new stats object
+  pub fn new() -> Stats {
+    Stats::default()
   }
 }

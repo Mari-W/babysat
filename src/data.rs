@@ -57,8 +57,29 @@ pub struct State {
 /// given an assignment
 #[derive(Debug)]
 pub enum Status {
+  // nothing can be said about the clause
   None,
+  // clause is satisfied
   Satisfied,
+  // clause is falsified
   Falsified,
+  // clause has exactly one variable unassigned 
+  // and its the only one that makes the clause true
   Forcing(i64),
+}
+
+#[derive(Debug, Default)]
+pub struct Stats {
+  // number of added clauses
+  added: usize,
+  // number of conflicts
+  conflicts: usize,
+  // number of decisions
+  decisions: usize,
+  // number of propagated literals
+  propagations: usize,
+  // number of calls to 'report'
+  reports: usize,
+  // number of root-level assigned variables
+  fixed: i64,
 }

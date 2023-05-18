@@ -48,6 +48,7 @@ fn connect_clauses(matrix: &mut Matrix, clauses: &Vec<Clause>, state: &mut State
   }
 }
 
+/// adds a new unit clause to the list of clauses and connects the unit literal
 fn add_unit_clause(cnf: &mut Cnf, matrix: &mut Matrix, state: &mut State, literal: i64) {
   assign(&mut matrix.assignments, state, literal);
   connect_literal(matrix, cnf.clauses.len(), literal);
@@ -56,6 +57,7 @@ fn add_unit_clause(cnf: &mut Cnf, matrix: &mut Matrix, state: &mut State, litera
   cnf.clauses.push(clause)
 }
 
+/// negates an already added unit clause and dis/re-connects the literal respectively 
 fn neg_unit_clause(cnf: &mut Cnf, matrix: &mut Matrix, state: &mut State, literal: i64) {
   assign(&mut matrix.assignments, state, -literal);
 
@@ -97,6 +99,7 @@ fn assign(assignments: &mut NVec<Assignment>, state: &mut State, literal: i64) {
   trace!("assigned literal {}", literal);
 }
 
+/// removes assignment for a literal 
 fn unassign(matrix: &mut Matrix, literal: i64) {
   matrix.assignments[literal] = Assignment::Unassigned;
   matrix.assignments[-literal] = Assignment::Unassigned;
@@ -134,6 +137,7 @@ fn status(assignments: &NVec<Assignment>, clause: &Clause) -> Status {
   }
 }
 
+/// BCP as seen in the lecture
 fn propagate(cnf: &Cnf, matrix: &mut Matrix, state: &mut State) -> bool {
   trace!(
     "propagating.. {} -- {}",
@@ -167,6 +171,8 @@ fn propagate(cnf: &Cnf, matrix: &mut Matrix, state: &mut State) -> bool {
   return true;
 }
 
+/// backtracks to the last trail height on the control stack
+/// and removes assignments for the affected literals 
 fn backtrack(state: &mut State, matrix: &mut Matrix) {
   // get old trail length
   let length = state

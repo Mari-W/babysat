@@ -1,20 +1,20 @@
 [package]
-name = "babysat"
 authors = ["Marius Weidner <weidner@cs.uni-freiburg.de>"]
-version = "0.1.0"
 edition = "2021"
-readme = "readme.md"
 license = "MIT"
+name = "babysat"
+readme = "readme.md"
+version = "0.1.0"
 
 # dependencies for parsing and logging 
 [dependencies]
-clap = { version = "4.2.7", features = ["derive"] }
-peg = "0.8.1"
+clap = {version = "4.2.7", features = ["derive"]}
 log = "0.4.17"
-simplelog = { version = "0.12.1" }
+peg = "0.8.1"
+simplelog = {version = "0.12.1"}
 
 # performance optimizations
 [profile.release]
-panic = "abort"
+codegen-units = 1
 lto = true
-codegen-unit=1
+panic = "abort"
