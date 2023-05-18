@@ -1,0 +1,20 @@
+[package]
+name = "babysat"
+authors = ["Marius Weidner <weidner@cs.uni-freiburg.de>"]
+version = "0.1.0"
+edition = "2021"
+readme = "readme.md"
+license = "MIT"
+
+# dependencies for parsing and logging 
+[dependencies]
+clap = { version = "4.2.7", features = ["derive"] }
+peg = "0.8.1"
+log = "0.4.17"
+simplelog = { version = "0.12.1" }
+
+# performance optimizations
+[profile.release]
+panic = "abort"
+lto = true
+codegen-unit=1
