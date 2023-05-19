@@ -5,7 +5,7 @@
 ```
 make install 
 ```
-Install Rust along necessary system dependencies.
+Install Rust along necessary system dependencies
 
 ## Build
 ```
