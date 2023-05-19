@@ -7,9 +7,9 @@ use crate::{
 
 /// iterating a clause iterates the literals
 impl IntoIterator for Clause {
-  type Item = i64;
+  type Item = isize;
 
-  type IntoIter = <Vec<i64> as IntoIterator>::IntoIter;
+  type IntoIter = <Vec<isize> as IntoIterator>::IntoIter;
 
   fn into_iter(self) -> Self::IntoIter {
     self.literals.into_iter()
@@ -18,9 +18,9 @@ impl IntoIterator for Clause {
 
 /// iterating a clause iterates the literals
 impl<'a> IntoIterator for &'a Clause {
-  type Item = &'a i64;
+  type Item = &'a isize;
 
-  type IntoIter = std::slice::Iter<'a, i64>;
+  type IntoIter = std::slice::Iter<'a, isize>;
 
   fn into_iter(self) -> Self::IntoIter {
     self.literals.iter()
@@ -51,14 +51,14 @@ impl<'a> IntoIterator for &'a Cnf {
 
 /// indexing a clause results in a literal
 impl Index<usize> for Clause {
-  type Output = i64;
+  type Output = isize;
 
   fn index(&self, idx: usize) -> &Self::Output {
     &self.literals[idx]
   }
 }
 
-/// displaying a clause results in a disjunction
+/// pretty printing clauses
 impl Display for Clause {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
@@ -73,7 +73,7 @@ impl Display for Clause {
   }
 }
 
-/// displaying a cnf results in a conjunction of disjunctions
+/// pretty printing cnf
 impl Display for Cnf {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
@@ -88,7 +88,7 @@ impl Display for Cnf {
   }
 }
 
-/// displaying a assignment results in the standard format
+/// pretty printing assignment
 impl Display for NVec<Assignment> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(

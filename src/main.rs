@@ -57,12 +57,6 @@ fn init_logging(args: &Args) -> Result<()> {
   }
 }
 
-// exit with code 20 unsatisfiable
-fn exit_unsatisfiable() -> ! {
-  info!("UNSATISFIABLE");
-  exit(20)
-}
-
 fn _main() -> Result<()> {
   // parse command line arguments
   let args = Args::parse();
@@ -78,10 +72,12 @@ fn _main() -> Result<()> {
   // parse problem instance
   let cnf = dimacs::parse_file(args.path)?;
 
-  match dpll::solve(cnf) {
-    Some(witness) => {
-      // debug_assert!(matches!(instance.check_model(), Ok(_)) || !result);
+  let sat = dpll::solve(cnf);
 
+  info!("Took {:.2?}", cpu_time::ProcessTime::now());
+
+  match sat {
+    Some(witness) => {
       if !args.no_witness {
         info!("Witness: \n{}", witness)
       }
@@ -89,7 +85,10 @@ fn _main() -> Result<()> {
       info!("SATISFIABLE");
       exit(10)
     }
-    None => exit_unsatisfiable(),
+    None => {
+      info!("UNSATISFIABLE");
+      exit(20)
+    }
   }
 }
 

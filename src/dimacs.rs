@@ -29,12 +29,9 @@ peg::parser! {
     /// parses a single clause
     rule clause(num_variables: usize) -> Clause
       = comment()* ___ literals:num()**_ ___ "0" ___ {?
-        if cfg!(debug_assertions) {
-          if literals.iter().map(|c| (c as &i64).abs()).max().unwrap_or(0) as usize > num_variables {
-            return Err("literal out of bounds")
-          }
+        if cfg!(debug_assertions) && literals.iter().map(|c| (c as &isize).abs()).max().unwrap_or(0) as usize > num_variables {
+          return Err("literal out of bounds")
         }
-
         Ok(Clause::new(literals))
       }
 
@@ -58,7 +55,7 @@ peg::parser! {
 }
 
 /// parses a .cnf from a file path
-pub(crate) fn parse_file<'a, P: AsRef<Path> + 'a>(path: Option<P>) -> crate::Result<Cnf> {
+pub fn parse_file<'a, P: AsRef<Path> + 'a>(path: Option<P>) -> crate::Result<Cnf> {
   // read file path if present and stdin otherwise
   let content = match &path {
     Some(path) => fs::read_to_string(path.as_ref())?,
@@ -76,7 +73,7 @@ pub(crate) fn parse_file<'a, P: AsRef<Path> + 'a>(path: Option<P>) -> crate::Res
   };
 
   // parse clauses and information
-  let (num_variables, num_clauses, clauses) = dimacs::cnf(content.as_str(), &filename.borrow())?;
+  let (num_variables, num_clauses, clauses) = dimacs::cnf(content.as_str(), filename.borrow())?;
 
   // build dpll instance
   let cnf = Cnf::new(filename, clauses, num_variables, num_clauses);

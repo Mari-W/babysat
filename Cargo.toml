@@ -6,12 +6,13 @@ name = "babysat"
 readme = "readme.md"
 version = "0.1.0"
 
-# dependencies for parsing and logging 
+# dependencies for parsing, logging and statistics 
 [dependencies]
 clap = {version = "4.2.7", features = ["derive"]}
 log = "0.4.17"
 peg = "0.8.1"
 simplelog = {version = "0.12.1"}
+cpu-time = "1.0.0"
 
 # performance optimizations
 [profile.release]

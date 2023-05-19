@@ -63,13 +63,13 @@ run 10 prime1369
 run 10 prime1681
 run 10 prime2209
 
-#run 20 add16
-#run 20 add32
-#run 20 add64
-#run 20 add128
+# run 20 add16
+# run 20 add32
+# run 20 add64
+# run 20 add128
 
 run 20 prime65537
 
 # This is a harder one
 #
-#run 20 prime4294967297
+run 20 prime4294967297

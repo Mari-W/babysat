@@ -4,8 +4,6 @@ use std::ops::{Index, IndexMut};
 ///
 /// currently naively represented by a vector of tuples
 /// and some arithmetics on indexing
-///
-/// TODO: performance
 #[derive(Debug)]
 pub struct NVec<T>(Vec<(T, T)>);
 
@@ -47,12 +45,11 @@ impl<'a, T> IntoIterator for &'a NVec<T> {
   }
 }
 
-/// indexing positively indexes the first item of the tuple
-/// indexing negatively indexes the second item of the tuple
-impl<T> Index<i64> for NVec<T> {
+/// index by integers
+impl<T> Index<isize> for NVec<T> {
   type Output = T;
 
-  fn index(&self, idx: i64) -> &Self::Output {
+  fn index(&self, idx: isize) -> &Self::Output {
     debug_assert!(idx != 0);
 
     // the index is the absolute value of the possibly negative index
@@ -60,6 +57,7 @@ impl<T> Index<i64> for NVec<T> {
     let n_idx: usize = (idx.abs() - 1)
       .try_into()
       .expect("unreasonably large index");
+    // the first or second tuple is chosen by the sign of the idx
     if idx >= 0 {
       &self.0[n_idx].0
     } else {
@@ -68,10 +66,9 @@ impl<T> Index<i64> for NVec<T> {
   }
 }
 
-/// indexing positively indexes the first item of the tuple
-/// indexing negatively indexes the second item of the tuple
-impl<T> IndexMut<i64> for NVec<T> {
-  fn index_mut(&mut self, idx: i64) -> &mut Self::Output {
+/// index by integers
+impl<T> IndexMut<isize> for NVec<T> {
+  fn index_mut(&mut self, idx: isize) -> &mut Self::Output {
     debug_assert!(idx != 0);
 
     // the index is the absolute value of the possibly negative index
@@ -79,7 +76,7 @@ impl<T> IndexMut<i64> for NVec<T> {
     let n_idx: usize = (idx.abs() - 1)
       .try_into()
       .expect("unreasonably large index");
-
+    // the first or second tuple is chosen by the sign of the idx
     if idx >= 0 {
       &mut self.0[n_idx].0
     } else {
