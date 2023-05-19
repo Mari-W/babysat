@@ -54,8 +54,6 @@ pub struct Stats {
   pub propagations: usize,
   // number of calls to 'report'
   pub reports: usize,
-  // number of root-level assigned variables
-  pub fixed: isize,
 }
 
 /// represents the state of the dpll algorithm
