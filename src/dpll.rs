@@ -1,8 +1,10 @@
-use log::{info, trace};
+use log::trace;
+
+#[cfg(debug_assertions)]
+use log::info;
 
 use crate::data::{Assignment, Clause, Cnf, State, Status};
 use crate::nvec::NVec;
-
 
 /// assigns a literal to true
 #[inline]
@@ -27,7 +29,6 @@ fn unassign(assignments: &mut NVec<Assignment>, literal: isize) {
 
   trace!("unassigned literal {}", literal);
 }
-
 
 /// backtracks to the last trail height on the control stack
 /// and removes assignments for the affected literals

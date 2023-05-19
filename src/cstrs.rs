@@ -1,7 +1,10 @@
 use crate::{
-  data::{Clause, Cnf, State, Stats},
+  data::{Clause, Cnf, State},
   nvec::NVec,
 };
+
+#[cfg(debug_assertions)]
+use crate::data::Stats;
 
 impl Clause {
   /// constructs a clause from literals
