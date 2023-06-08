@@ -10,12 +10,29 @@ use crate::nvec::NVec;
 
 /// assigns a literal to true
 #[inline]
-fn assign(literal: isize, assignments: &mut NVec<Assignment>, trail: &mut Vec<isize>) {
+fn assign(
+  literal: isize,
+  clauses: &mut [Clause],
+  references: &NVec<Vec<usize>>,
+  assignments: &mut NVec<Assignment>,
+  trail: &mut Vec<isize>,
+) {
   debug_assert!(literal != 0);
 
   // update matrix
   assignments[literal] = Assignment::True;
   assignments[-literal] = Assignment::False;
+
+  // update counters
+  for clause in &references[literal] {
+    clauses[*clause].num_true += 1;
+  }
+
+  for clause in &references[-literal] {
+    let clause = &mut clauses[*clause];
+    clause.num_false += 1;
+    clause.sum += literal
+  }
 
   // push to literal to trail
   trail.push(literal);
@@ -25,9 +42,29 @@ fn assign(literal: isize, assignments: &mut NVec<Assignment>, trail: &mut Vec<is
 
 /// removes assignment for a literal
 #[inline]
-fn unassign(assignments: &mut NVec<Assignment>, literal: isize) {
+fn unassign(
+  literal: isize,
+  clauses: &mut [Clause],
+  references: &NVec<Vec<usize>>,
+  assignments: &mut NVec<Assignment>,
+) {
+  debug_assert!(
+    matches!(assignments[literal], Assignment::True)
+      && matches!(assignments[-literal], Assignment::False)
+  );
+
   assignments[literal] = Assignment::Unassigned;
   assignments[-literal] = Assignment::Unassigned;
+
+  for clause in &references[literal] {
+    clauses[*clause].num_true -= 1;
+  }
+
+  for clause in &references[-literal] {
+    let clause = &mut clauses[*clause];
+    clause.num_false -= 1;
+    clause.sum -= literal
+  }
 
   trace!("unassigned literal {}", literal);
 }
@@ -35,7 +72,7 @@ fn unassign(assignments: &mut NVec<Assignment>, literal: isize) {
 /// backtracks to the last trail height on the control stack
 /// and removes assignments for the affected literals
 /// returns true if backtracking succeeded and false when formula is unsatisfiable
-fn backtrack(state: &mut State) -> bool {
+fn backtrack(clauses: &mut [Clause], state: &mut State) -> bool {
   // backtracking on the root level means
   // the formula is falsified
   if state.level == 0 {
@@ -52,12 +89,28 @@ fn backtrack(state: &mut State) -> bool {
 
   // unassign all literals from the trail
   for literal in state.trail.drain(length + 1..) {
-    unassign(&mut state.assignments, literal)
+    unassign(
+      literal,
+      clauses,
+      &mut state.references,
+      &mut state.assignments,
+    )
   }
 
   // and negate the element that initiated the propagations
-  let literal = state.trail.pop().expect("expected ..");
-  assign(-literal, &mut state.assignments, &mut state.trail);
+  let literal = state
+    .trail
+    .pop()
+    .expect("expected to find the literal that was split on this level to negate on");
+
+  unassign(literal, clauses, &state.references, &mut state.assignments);
+  assign(
+    -literal,
+    clauses,
+    &state.references,
+    &mut state.assignments,
+    &mut state.trail,
+  );
 
   // decrement level
   state.level -= 1;
@@ -71,12 +124,20 @@ fn backtrack(state: &mut State) -> bool {
 
 /// decides on a new literal that can be assigned
 /// returns true if a decision could made and false when formula is satisfiable
-fn decide(cnf: &Cnf, state: &mut State) -> bool {
+fn decide(cnf: &mut Cnf, state: &mut State) -> bool {
+
+  if state.assignments.len() == 0 {
+    // empty formula is true
+    return false;
+  }
+
   // DLIS
   let mut scores: NVec<usize> = NVec::new(cnf.num_variables);
 
   for clause in &cnf.clauses {
-    match status(&state.assignments, clause) {
+    trace!("{:#?}", clause);
+    trace!("{:#?}", state.assignments);
+    match status(clause) {
       Status::None => {
         for literal in clause {
           // increment counter for all literals that are present in unsatisfied clause
@@ -88,23 +149,21 @@ fn decide(cnf: &Cnf, state: &mut State) -> bool {
     }
   }
 
-  let (literal, occurrences) = scores
+  let literal = match scores
     .iter_zipped()
     .enumerate()
     .filter(
-      |(literal, _)| match &state.assignments[(*literal + 1) as isize] {
-        Assignment::True | Assignment::False => false,
+      |(variable, _)| match &state.assignments[(variable + 1) as isize] {
         Assignment::Unassigned => true,
+        _ => false,
       },
     )
-    .max_by(|(_, (p1, n1)), (_, (p2, n2))| max(p1, n1).cmp(max(p2, n2)))
-    .map(|(literal, (p, n))| (literal + 1, p + n))
-    .unwrap_or((0, 0));
-
-  if occurrences == 0 {
-    trace!("all variables assigned");
-    return false;
-  }
+    .max_by(|(_, (pos1, neg1)), (_, (pos2, neg2))| max(pos1, neg1).cmp(max(pos2, neg2)))
+  {
+    Some((literal, _)) => literal + 1,
+    // all variables are assigned
+    None => return false,
+  };
 
   // increment level
   state.level += 1;
@@ -113,7 +172,13 @@ fn decide(cnf: &Cnf, state: &mut State) -> bool {
   state.control.push(state.trail.len());
 
   // assign decided literal
-  assign(literal as isize, &mut state.assignments, &mut state.trail);
+  assign(
+    literal as isize,
+    &mut cnf.clauses,
+    &state.references,
+    &mut state.assignments,
+    &mut state.trail,
+  );
 
   trace!(
     "decided on literal {} and incremented to level {}",
@@ -131,35 +196,26 @@ fn decide(cnf: &Cnf, state: &mut State) -> bool {
 
 /// returns the current status of a clause given an assignment
 #[inline]
-fn status(assignments: &NVec<Assignment>, clause: &Clause) -> Status {
-  let mut unassigned = None;
-  for literal in clause {
-    match assignments[*literal] {
-      Assignment::Unassigned => {
-        // two unassigned literals means we know nothing
-        match unassigned {
-          Some(_) => return Status::None,
-          None => unassigned = Some(*literal),
-        }
-      }
-      // if one literal is satisfied then the clause is satisfied
-      Assignment::True => return Status::Satisfied,
-      Assignment::False => (),
-    }
-  }
-  match unassigned {
-    Some(literal) => Status::Forcing(literal),
-    None => Status::Falsified,
+fn status(clause: &Clause) -> Status {
+  if clause.num_true > 0 {
+    Status::Satisfied
+  } else if clause.size == clause.num_false {
+    Status::Falsified
+  } else if clause.size == clause.num_false + 1 {
+    Status::Forcing(clause.sum)
+  } else {
+    Status::None
   }
 }
 
 /// boolean constraint propagation
-fn propagate(state: &mut State) -> bool {
+fn propagate(clauses: &mut [Clause], state: &mut State) -> bool {
   // while not all propagated
   while state.propagated < state.trail.len() {
     // iterate all negative occurrences of a literal from the trail
     for clause in &state.references[-state.trail[state.propagated]] {
-      match status(&state.assignments, clause) {
+      let clause = &clauses[*clause];
+      match status(clause) {
         // nothing to do
         Status::None | Status::Satisfied => (),
         // conflict
@@ -176,7 +232,13 @@ fn propagate(state: &mut State) -> bool {
         // forcing literal is assigned
         Status::Forcing(literal) => {
           trace!("found forcing clause {} that forced {}", clause, literal);
-          assign(literal, &mut state.assignments, &mut state.trail);
+          assign(
+            literal,
+            clauses,
+            &state.references,
+            &mut state.assignments,
+            &mut state.trail,
+          );
         }
       }
     }
@@ -192,8 +254,15 @@ fn propagate(state: &mut State) -> bool {
 
 /// connects all literals in a list of clauses to the matrix
 /// returns true if all clauses connected and false if formula is unsat
-fn connect_clauses<'a>(clauses: &'a Vec<Clause>, state: &mut State<'a>) -> bool {
-  for clause in clauses {
+fn connect_clauses(clauses: &mut [Clause], state: &mut State) -> bool {
+  for (i, clause) in clauses.iter().enumerate() {
+    // connect literals to clauses in matrix
+    for literal in clause {
+      state.references[*literal].push(i);
+    }
+  }
+  for i in 0..clauses.len() {
+    let clause = &clauses[i];
     match clause.size {
       // handle empty clause added
       0 => {
@@ -206,12 +275,18 @@ fn connect_clauses<'a>(clauses: &'a Vec<Clause>, state: &mut State<'a>) -> bool 
         match state.assignments[literal] {
           // unassigned means we do unit propagation
           Assignment::Unassigned => {
-            assign(literal, &mut state.assignments, &mut state.trail);
-            trace!("assigned initial unit clause {}", clause)
+            assign(
+              literal,
+              clauses,
+              &state.references,
+              &mut state.assignments,
+              &mut state.trail,
+            );
+            trace!("assigned initial unit clause {}", i)
           }
           // false means the given clauses are inconsistent
           Assignment::False => {
-            trace!("found inconsistent initial unit clause {}", clause);
+            trace!("found inconsistent initial unit clause {}", i);
             return false;
           }
           Assignment::True => (),
@@ -219,11 +294,6 @@ fn connect_clauses<'a>(clauses: &'a Vec<Clause>, state: &mut State<'a>) -> bool 
       }
       _ => (),
     };
-
-    // connect literals to clauses in matrix
-    for literal in clause {
-      state.references[*literal].push(clause);
-    }
 
     #[cfg(debug_assertions)]
     {
@@ -233,25 +303,25 @@ fn connect_clauses<'a>(clauses: &'a Vec<Clause>, state: &mut State<'a>) -> bool 
   true
 }
 
-pub fn solve(cnf: Cnf) -> Option<NVec<Assignment>> {
+pub fn solve(mut cnf: Cnf) -> Option<NVec<Assignment>> {
   // instantiate state
   let mut state = State::new(cnf.num_variables);
 
   // connect the literals to clause references in matrix
-  if !connect_clauses(&cnf.clauses, &mut state) {
+  if !connect_clauses(&mut cnf.clauses, &mut state) {
     return None;
   }
 
   // dpll algorithm
   loop {
     // if propagation succeeds
-    if propagate(&mut state) {
+    if propagate(&mut cnf.clauses, &mut state) {
       // decide on new literal
-      if !decide(&cnf, &mut state) {
+      if !decide(&mut cnf, &mut state) {
         // except if there are non left to assign and formula is sat
 
         #[cfg(debug_assertions)]
-        check_model(&cnf.clauses, &state);
+        debug_assert!(check_model(&cnf.clauses));
 
         #[cfg(debug_assertions)]
         info!("{:#?}", state.stats);
@@ -259,7 +329,7 @@ pub fn solve(cnf: Cnf) -> Option<NVec<Assignment>> {
         return Some(state.assignments);
       }
     // if propagation fails we try to backtrack
-    } else if !backtrack(&mut state) {
+    } else if !backtrack(&mut cnf.clauses, &mut state) {
       // except if we are on the last level then formula is unsat
       #[cfg(debug_assertions)]
       info!("{:#?}", state.stats);
@@ -270,17 +340,9 @@ pub fn solve(cnf: Cnf) -> Option<NVec<Assignment>> {
 
 /// checks a model given an assignment
 #[cfg(debug_assertions)]
-fn check_model(clauses: &Vec<Clause>, state: &State) -> bool {
-  let check_clause = |clause: &Clause| -> bool {
-    for literal in clause {
-      if matches!(state.assignments[*literal], Assignment::True) {
-        return true;
-      }
-    }
-    false
-  };
+fn check_model(clauses: &Vec<Clause>) -> bool {
   for clause in clauses {
-    if !check_clause(clause) {
+    if clause.num_true == 0 {
       return false;
     }
   }

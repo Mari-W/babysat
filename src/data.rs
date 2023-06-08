@@ -5,6 +5,9 @@ use crate::nvec::NVec;
 pub struct Clause {
   pub size: usize,
   pub literals: Vec<isize>,
+  pub num_true: usize,
+  pub num_false: usize,
+  pub sum: isize
 }
 
 /// represents a cnf
@@ -55,11 +58,11 @@ pub struct Stats {
 }
 
 /// represents the state of the dpll algorithm
-pub struct State<'a> {
+pub struct State {
   // stores the assignment for each literal
   pub assignments: NVec<Assignment>,
   // stores the pointer of all clauses where a literal occurs
-  pub references: NVec<Vec<&'a Clause>>,
+  pub references: NVec<Vec<usize>>,
   // decision level
   pub level: usize,
   // next position on trail to propagate

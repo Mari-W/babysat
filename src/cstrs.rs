@@ -9,17 +9,13 @@ use crate::data::Stats;
 impl Clause {
   /// constructs a clause from literals
   pub fn new(literals: Vec<isize>) -> Clause {
+    let sum = literals.iter().sum();
     Clause {
       size: literals.len(),
       literals,
-    }
-  }
-
-  /// constructs a unit clause from one literal
-  pub fn new_unit(lit: isize) -> Clause {
-    Clause {
-      size: 1,
-      literals: vec![lit],
+      num_true: 0,
+      num_false: 0,
+      sum,
     }
   }
 }
@@ -29,21 +25,21 @@ impl Cnf {
   pub fn new(
     filename: String,
     clauses: Vec<Clause>,
-    num_clauses: usize,
     num_variables: usize,
+    num_clauses: usize,
   ) -> Cnf {
     Cnf {
       filename,
       clauses,
-      num_clauses,
       num_variables,
+      num_clauses,
     }
   }
 }
 
-impl<'a> State<'a> {
+impl State {
   /// constructs the default state
-  pub fn new(num_variables: usize) -> State<'a> {
+  pub fn new(num_variables: usize) -> State {
     State {
       assignments: NVec::new(num_variables),
       references: NVec::new(num_variables),

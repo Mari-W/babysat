@@ -28,6 +28,10 @@ impl<T> NVec<T> {
     Self { max_index, data, p }
   }
 
+  pub fn len(&self) -> usize {
+    self.max_index
+  }
+
   pub fn iter_pos(&self) -> NVecIterator<'_, T> {
     NVecIterator {
       array: self,
@@ -54,7 +58,7 @@ impl<T> Index<isize> for NVec<T> {
 
   #[inline]
   fn index(&self, index: isize) -> &Self::Output {
-    debug_assert!(index.unsigned_abs() <= self.max_index);
+    debug_assert!(index.unsigned_abs() <= self.max_index && index != 0);
     unsafe { &*self.p.offset(index) }
   }
 }
@@ -62,7 +66,7 @@ impl<T> Index<isize> for NVec<T> {
 impl<T> IndexMut<isize> for NVec<T> {
   #[inline]
   fn index_mut(&mut self, index: isize) -> &mut Self::Output {
-    debug_assert!(index.unsigned_abs() <= self.max_index);
+    debug_assert!(index.unsigned_abs() <= self.max_index && index != 0);
     unsafe { &mut *self.p.offset(index) }
   }
 }
@@ -81,19 +85,6 @@ impl<'a, T> Iterator for NVecIterator<'a, T> {
       result
     } else {
       None
-    }
-  }
-}
-
-impl<'a, T> IntoIterator for &'a NVec<T> {
-  type Item = &'a T;
-  type IntoIter = NVecIterator<'a, T>;
-
-  fn into_iter(self) -> Self::IntoIter {
-    NVecIterator {
-      array: self,
-      current: -(self.max_index as isize),
-      up: true,
     }
   }
 }
