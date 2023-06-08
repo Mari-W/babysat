@@ -95,9 +95,9 @@ impl Display for NVec<Assignment> {
       f,
       "v {} 0",
       self
-        .into_iter()
+        .iter_pos()
         .enumerate()
-        .map(|(i, a)| match a.0 {
+        .map(|(i, a)| match a {
           Assignment::Unassigned | Assignment::True => (i + 1).to_string(),
           Assignment::False => format!("-{}", (i + 1)),
         })

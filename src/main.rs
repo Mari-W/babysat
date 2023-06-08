@@ -1,4 +1,4 @@
-use std::process::exit;
+use std::{process::exit, time::SystemTime};
 
 use clap::Parser;
 use log::{error, info, LevelFilter};
@@ -72,9 +72,11 @@ fn _main() -> Result<()> {
   // parse problem instance
   let cnf = dimacs::parse_file(args.path)?;
 
+  let time = SystemTime::now();
+
   let sat = dpll::solve(cnf);
 
-  info!("Took {:.2?}", cpu_time::ProcessTime::now());
+  info!("Solving took {:.2?} [{:.2?}]", SystemTime::now().duration_since(time).unwrap(), cpu_time::ProcessTime::now());
 
   match sat {
     Some(witness) => {

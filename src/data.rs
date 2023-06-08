@@ -52,15 +52,13 @@ pub struct Stats {
   pub decisions: usize,
   // number of propagated literals
   pub propagations: usize,
-  // number of calls to 'report'
-  pub reports: usize,
 }
 
 /// represents the state of the dpll algorithm
 pub struct State<'a> {
   // stores the assignment for each literal
   pub assignments: NVec<Assignment>,
-  // stores the indexes of all clauses where a literal occurs
+  // stores the pointer of all clauses where a literal occurs
   pub references: NVec<Vec<&'a Clause>>,
   // decision level
   pub level: usize,

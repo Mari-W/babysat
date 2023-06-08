@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 use log::trace;
 
 #[cfg(debug_assertions)]
@@ -69,25 +71,37 @@ fn backtrack(state: &mut State) -> bool {
 
 /// decides on a new literal that can be assigned
 /// returns true if a decision could made and false when formula is satisfiable
-fn decide(state: &mut State) -> bool {
-  // find new literal that is unassigned
-  // by naively iterating the assignment vector until
-  // some unassigned literal is found
-  let mut literal = 0;
-  for (idx, (pos, neg)) in (&state.assignments).into_iter().enumerate() {
-    debug_assert!(!(matches!(pos, Assignment::Unassigned) ^ matches!(neg, Assignment::Unassigned)));
+fn decide(cnf: &Cnf, state: &mut State) -> bool {
+  // DLIS
+  let mut scores: NVec<usize> = NVec::new(cnf.num_variables);
 
-    match pos {
-      Assignment::Unassigned => {
-        literal = (idx + 1) as isize;
-        break;
+  for clause in &cnf.clauses {
+    match status(&state.assignments, clause) {
+      Status::None => {
+        for literal in clause {
+          // increment counter for all literals that are present in unsatisfied clause
+          scores[*literal] += 1;
+        }
       }
-      Assignment::True | Assignment::False => continue,
+      Status::Forcing(_) => unreachable!(),
+      Status::Satisfied | Status::Falsified => continue,
     }
   }
 
-  // no literal was found so the cnf is satisfiable
-  if literal == 0 {
+  let (literal, occurrences) = scores
+    .iter_zipped()
+    .enumerate()
+    .filter(
+      |(literal, _)| match &state.assignments[(*literal + 1) as isize] {
+        Assignment::True | Assignment::False => false,
+        Assignment::Unassigned => true,
+      },
+    )
+    .max_by(|(_, (p1, n1)), (_, (p2, n2))| max(p1, n1).cmp(max(p2, n2)))
+    .map(|(literal, (p, n))| (literal + 1, p + n))
+    .unwrap_or((0, 0));
+
+  if occurrences == 0 {
     trace!("all variables assigned");
     return false;
   }
@@ -99,7 +113,7 @@ fn decide(state: &mut State) -> bool {
   state.control.push(state.trail.len());
 
   // assign decided literal
-  assign(literal, &mut state.assignments, &mut state.trail);
+  assign(literal as isize, &mut state.assignments, &mut state.trail);
 
   trace!(
     "decided on literal {} and incremented to level {}",
@@ -233,7 +247,7 @@ pub fn solve(cnf: Cnf) -> Option<NVec<Assignment>> {
     // if propagation succeeds
     if propagate(&mut state) {
       // decide on new literal
-      if !decide(&mut state) {
+      if !decide(&cnf, &mut state) {
         // except if there are non left to assign and formula is sat
 
         #[cfg(debug_assertions)]

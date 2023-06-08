@@ -1,86 +1,99 @@
-use std::ops::{Index, IndexMut};
+use std::{
+  iter::Zip,
+  ops::{Index, IndexMut},
+};
 
-/// a negative indexable vector
-///
-/// currently naively represented by a vector of tuples
-/// and some arithmetics on indexing
 #[derive(Debug)]
-pub struct NVec<T>(Vec<(T, T)>);
+pub struct NVec<T> {
+  max_index: usize,
+  #[allow(dead_code)]
+  data: Box<[T]>,
+  p: *mut T,
+}
+
+#[derive(Debug)]
+pub struct NVecIterator<'a, T> {
+  array: &'a NVec<T>,
+  current: isize,
+  up: bool,
+}
 
 impl<T> NVec<T> {
-  /// constructs a new negative indexable vector of size `size`
-  /// filled with the default value of a type (e.g 0 for i64)
-  pub fn new(size: usize) -> NVec<T>
+  pub fn new(max_index: usize) -> Self
   where
     T: Default + Clone,
   {
-    NVec(vec![(T::default(), T::default()); size])
+    let mut data = vec![T::default(); max_index * 2 + 1].into_boxed_slice();
+    let p = unsafe { data.as_mut_ptr().add(max_index) };
+    Self { max_index, data, p }
   }
 
-  /// the length of the vector
-  pub fn len(&self) -> usize {
-    self.0.len()
+  pub fn iter_pos(&self) -> NVecIterator<'_, T> {
+    NVecIterator {
+      array: self,
+      current: 1,
+      up: true,
+    }
   }
-}
 
-/// iterate the positive and negative index as tuples
-impl<T> IntoIterator for NVec<T> {
-  type Item = (T, T);
-
-  type IntoIter = <Vec<(T, T)> as IntoIterator>::IntoIter;
-
-  fn into_iter(self) -> Self::IntoIter {
-    self.0.into_iter()
+  pub fn iter_neg(&self) -> NVecIterator<'_, T> {
+    NVecIterator {
+      array: self,
+      current: -1,
+      up: false,
+    }
   }
-}
 
-/// iterate the positive and negative index as tuples
-impl<'a, T> IntoIterator for &'a NVec<T> {
-  type Item = &'a (T, T);
-
-  type IntoIter = std::slice::Iter<'a, (T, T)>;
-
-  fn into_iter(self) -> Self::IntoIter {
-    self.0.iter()
+  pub fn iter_zipped(&self) -> Zip<NVecIterator<'_, T>, NVecIterator<'_, T>> {
+    self.iter_pos().zip(self.iter_neg())
   }
 }
 
-/// index by integers
 impl<T> Index<isize> for NVec<T> {
   type Output = T;
 
-  fn index(&self, idx: isize) -> &Self::Output {
-    debug_assert!(idx != 0);
+  #[inline]
+  fn index(&self, index: isize) -> &Self::Output {
+    debug_assert!(index.unsigned_abs() <= self.max_index);
+    unsafe { &*self.p.offset(index) }
+  }
+}
 
-    // the index is the absolute value of the possibly negative index
-    // shifted to the left by one
-    let n_idx: usize = (idx.abs() - 1)
-      .try_into()
-      .expect("unreasonably large index");
-    // the first or second tuple is chosen by the sign of the idx
-    if idx >= 0 {
-      &self.0[n_idx].0
+impl<T> IndexMut<isize> for NVec<T> {
+  #[inline]
+  fn index_mut(&mut self, index: isize) -> &mut Self::Output {
+    debug_assert!(index.unsigned_abs() <= self.max_index);
+    unsafe { &mut *self.p.offset(index) }
+  }
+}
+
+impl<'a, T> Iterator for NVecIterator<'a, T> {
+  type Item = &'a T;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    if self.up && self.current <= self.array.max_index as isize {
+      let result = Some(&self.array[self.current]);
+      self.current += 1;
+      result
+    } else if !self.up && self.current >= -(self.array.max_index as isize) {
+      let result = Some(&self.array[self.current]);
+      self.current -= 1;
+      result
     } else {
-      &self.0[n_idx].1
+      None
     }
   }
 }
 
-/// index by integers
-impl<T> IndexMut<isize> for NVec<T> {
-  fn index_mut(&mut self, idx: isize) -> &mut Self::Output {
-    debug_assert!(idx != 0);
+impl<'a, T> IntoIterator for &'a NVec<T> {
+  type Item = &'a T;
+  type IntoIter = NVecIterator<'a, T>;
 
-    // the index is the absolute value of the possibly negative index
-    // shifted to the left by one
-    let n_idx: usize = (idx.abs() - 1)
-      .try_into()
-      .expect("unreasonably large index");
-    // the first or second tuple is chosen by the sign of the idx
-    if idx >= 0 {
-      &mut self.0[n_idx].0
-    } else {
-      &mut self.0[n_idx].1
+  fn into_iter(self) -> Self::IntoIter {
+    NVecIterator {
+      array: self,
+      current: -(self.max_index as isize),
+      up: true,
     }
   }
 }

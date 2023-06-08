@@ -76,7 +76,5 @@ pub fn parse_file<'a, P: AsRef<Path> + 'a>(path: Option<P>) -> crate::Result<Cnf
   let (num_variables, num_clauses, clauses) = dimacs::cnf(content.as_str(), filename.borrow())?;
 
   // build dpll instance
-  let cnf = Cnf::new(filename, clauses, num_variables, num_clauses);
-  // dpll.add_clauses(clauses);
-  Ok(cnf)
+  Ok(Cnf::new(filename, clauses, num_variables, num_clauses))
 }
