@@ -129,8 +129,6 @@ fn decide(cnf: &mut Cnf, state: &mut State) -> bool {
   let mut scores: NVec<usize> = NVec::new(cnf.num_variables);
 
   for clause in &cnf.clauses {
-    trace!("{:#?}", clause);
-    trace!("{:#?}", state.assignments);
     match status(clause) {
       Status::None => {
         for literal in clause {
