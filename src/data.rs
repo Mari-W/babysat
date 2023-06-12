@@ -20,7 +20,6 @@ pub struct Cnf {
 }
 
 /// represents an assignment state in 8 bits
-#[repr(i8)]
 #[derive(Debug, Default, Clone)]
 pub enum Assignment {
   #[default]

@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Index};
+use std::fmt::Display;
 
 use crate::{
   data::{Assignment, Clause, Cnf},
@@ -50,13 +50,13 @@ impl<'a> IntoIterator for &'a Cnf {
 }
 
 /// indexing a clause results in a literal
-impl Index<usize> for Clause {
+/* impl Index<usize> for Clause {
   type Output = isize;
 
   fn index(&self, idx: usize) -> &Self::Output {
     &self.literals[idx]
   }
-}
+} */
 
 /// pretty printing clauses
 impl Display for Clause {

@@ -89,12 +89,7 @@ fn backtrack(clauses: &mut [Clause], state: &mut State) -> bool {
 
   // unassign all literals from the trail
   for literal in state.trail.drain(length + 1..) {
-    unassign(
-      literal,
-      clauses,
-      &mut state.references,
-      &mut state.assignments,
-    )
+    unassign(literal, clauses, &state.references, &mut state.assignments)
   }
 
   // and negate the element that initiated the propagations
@@ -125,7 +120,6 @@ fn backtrack(clauses: &mut [Clause], state: &mut State) -> bool {
 /// decides on a new literal that can be assigned
 /// returns true if a decision could made and false when formula is satisfiable
 fn decide(cnf: &mut Cnf, state: &mut State) -> bool {
-
   if state.assignments.len() == 0 {
     // empty formula is true
     return false;
@@ -152,12 +146,12 @@ fn decide(cnf: &mut Cnf, state: &mut State) -> bool {
   let literal = match scores
     .iter_zipped()
     .enumerate()
-    .filter(
-      |(variable, _)| match &state.assignments[(variable + 1) as isize] {
-        Assignment::Unassigned => true,
-        _ => false,
-      },
-    )
+    .filter(|(variable, _)| {
+      matches!(
+        &state.assignments[(variable + 1) as isize],
+        Assignment::Unassigned
+      )
+    })
     .max_by(|(_, (pos1, neg1)), (_, (pos2, neg2))| max(pos1, neg1).cmp(max(pos2, neg2)))
   {
     Some((literal, _)) => literal + 1,
@@ -201,7 +195,7 @@ fn status(clause: &Clause) -> Status {
     Status::Satisfied
   } else if clause.size == clause.num_false {
     Status::Falsified
-  } else if clause.size == clause.num_false + 1 {
+  } else if clause.size - 1 == clause.num_false {
     Status::Forcing(clause.sum)
   } else {
     Status::None
@@ -271,7 +265,7 @@ fn connect_clauses(clauses: &mut [Clause], state: &mut State) -> bool {
       }
       // handle unit clause added
       1 => {
-        let literal = clause[0];
+        let literal = clause.sum;
         match state.assignments[literal] {
           // unassigned means we do unit propagation
           Assignment::Unassigned => {
