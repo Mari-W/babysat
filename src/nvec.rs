@@ -28,10 +28,6 @@ impl<T> NVec<T> {
     Self { max_index, data, p }
   }
 
-  pub fn len(&self) -> usize {
-    self.max_index
-  }
-
   pub fn iter_pos(&self) -> NVecIterator<'_, T> {
     NVecIterator {
       array: self,

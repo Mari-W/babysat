@@ -120,11 +120,6 @@ fn backtrack(clauses: &mut [Clause], state: &mut State) -> bool {
 /// decides on a new literal that can be assigned
 /// returns true if a decision could made and false when formula is satisfiable
 fn decide(cnf: &mut Cnf, state: &mut State) -> bool {
-  if state.assignments.len() == 0 {
-    // empty formula is true
-    return false;
-  }
-
   // DLIS
   let mut scores: NVec<usize> = NVec::new(cnf.num_variables);
 
@@ -298,6 +293,11 @@ fn connect_clauses(clauses: &mut [Clause], state: &mut State) -> bool {
 pub fn solve(mut cnf: Cnf) -> Option<NVec<Assignment>> {
   // instantiate state
   let mut state = State::new(cnf.num_variables);
+
+  if cnf.clauses.len() == 0 {
+    // empty formula is true
+    return Some(NVec::new(0));
+  }
 
   // connect the literals to clause references in matrix
   if !connect_clauses(&mut cnf.clauses, &mut state) {
