@@ -122,13 +122,25 @@ fn backtrack(clauses: &mut [Clause], state: &mut State) -> bool {
 fn decide(cnf: &mut Cnf, state: &mut State) -> bool {
   // DLIS
   let mut scores: NVec<usize> = NVec::new(cnf.num_variables);
-
+  let mut max: usize = 0;
+  let mut literal: isize = 0;
   for clause in &cnf.clauses {
     match status(clause) {
       Status::None => {
-        for literal in clause {
+        for lit in clause {
           // increment counter for all literals that are present in unsatisfied clause
-          scores[*literal] += 1;
+          // if literal is unassigned
+          if matches!(
+            &state.assignments[*lit],
+            Assignment::Unassigned
+          ) {
+            let score = scores[*lit] + 1;
+            if scores[*lit] > max {
+              max = score;
+              literal = *lit;
+            }
+            scores[*lit] = score;
+          }
         }
       }
       Status::Forcing(_) => unreachable!(),
@@ -136,21 +148,10 @@ fn decide(cnf: &mut Cnf, state: &mut State) -> bool {
     }
   }
 
-  let literal = match scores
-    .iter_zipped()
-    .enumerate()
-    .filter(|(variable, _)| {
-      matches!(
-        &state.assignments[(variable + 1) as isize],
-        Assignment::Unassigned
-      )
-    })
-    .max_by(|(_, (pos1, neg1)), (_, (pos2, neg2))| max(pos1, neg1).cmp(max(pos2, neg2)))
-  {
-    Some((literal, _)) => literal + 1,
-    // all variables are assigned
-    None => return false,
-  };
+  if literal == 0 {
+    // no literal left
+    return false
+  }
 
   // increment level
   state.level += 1;
@@ -294,7 +295,7 @@ pub fn solve(mut cnf: Cnf) -> Option<NVec<Assignment>> {
   // instantiate state
   let mut state = State::new(cnf.num_variables);
 
-  if cnf.clauses.len() == 0 {
+  if cnf.clauses.is_empty() {
     // empty formula is true
     return Some(NVec::new(0));
   }
@@ -332,7 +333,7 @@ pub fn solve(mut cnf: Cnf) -> Option<NVec<Assignment>> {
 
 /// checks a model given an assignment
 #[cfg(debug_assertions)]
-fn check_model(clauses: &Vec<Clause>) -> bool {
+fn check_model(clauses: &[Clause]) -> bool {
   for clause in clauses {
     if clause.num_true == 0 {
       return false;
