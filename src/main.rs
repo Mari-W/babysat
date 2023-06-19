@@ -76,7 +76,11 @@ fn _main() -> Result<()> {
 
   let sat = dpll::solve(cnf);
 
-  info!("Solving took {:.2?} [{:.2?}]", SystemTime::now().duration_since(time).unwrap(), cpu_time::ProcessTime::now());
+  info!(
+    "Solving took {:.2?} [{:.2?}]",
+    SystemTime::now().duration_since(time).unwrap(),
+    cpu_time::ProcessTime::now()
+  );
 
   match sat {
     Some(witness) => {

@@ -7,7 +7,7 @@ pub struct Clause {
   pub literals: Vec<isize>,
   pub num_true: usize,
   pub num_false: usize,
-  pub sum: isize
+  pub sum: isize,
 }
 
 /// represents a cnf

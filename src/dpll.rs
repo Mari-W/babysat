@@ -1,5 +1,3 @@
-use std::cmp::max;
-
 use log::trace;
 
 #[cfg(debug_assertions)]
@@ -161,7 +159,7 @@ fn decide(cnf: &mut Cnf, state: &mut State) -> bool {
 
   // assign decided literal
   assign(
-    literal as isize,
+    literal,
     &mut cnf.clauses,
     &state.references,
     &mut state.assignments,

@@ -6,17 +6,6 @@ use crate::{
 };
 
 /// iterating a clause iterates the literals
-impl IntoIterator for Clause {
-  type Item = isize;
-
-  type IntoIter = <Vec<isize> as IntoIterator>::IntoIter;
-
-  fn into_iter(self) -> Self::IntoIter {
-    self.literals.into_iter()
-  }
-}
-
-/// iterating a clause iterates the literals
 impl<'a> IntoIterator for &'a Clause {
   type Item = &'a isize;
 
@@ -24,17 +13,6 @@ impl<'a> IntoIterator for &'a Clause {
 
   fn into_iter(self) -> Self::IntoIter {
     self.literals.iter()
-  }
-}
-
-/// iterating a cnf iterates the clauses
-impl IntoIterator for Cnf {
-  type Item = Clause;
-
-  type IntoIter = <Vec<Clause> as IntoIterator>::IntoIter;
-
-  fn into_iter(self) -> Self::IntoIter {
-    self.clauses.into_iter()
   }
 }
 
@@ -48,15 +26,6 @@ impl<'a> IntoIterator for &'a Cnf {
     self.clauses.iter()
   }
 }
-
-/// indexing a clause results in a literal
-/* impl Index<usize> for Clause {
-  type Output = isize;
-
-  fn index(&self, idx: usize) -> &Self::Output {
-    &self.literals[idx]
-  }
-} */
 
 /// pretty printing clauses
 impl Display for Clause {
@@ -95,7 +64,8 @@ impl Display for NVec<Assignment> {
       f,
       "v {} 0",
       self
-        .iter_pos()
+        .into_iter()
+        .skip(self.length + 1)
         .enumerate()
         .map(|(i, a)| match a {
           Assignment::Unassigned | Assignment::True => (i + 1).to_string(),
